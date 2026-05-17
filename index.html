@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f0f1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #1a1a2e;
+            padding: 15px 25px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 200px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.9rem;
+            color: #a0a0b0;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00d4aa;
+        }
+
+        .form-section {
+            background: #1a1a2e;
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .form-section h2 {
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #ccccdd;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            background: #0f0f1a;
+            color: #ffffff;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        /* Стили для кастомной кнопки выбора даты */
+        .date-picker-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .date-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px;
+            background: #0f0f1a;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: border 0.3s;
+            user-select: none;
+        }
+
+        .date-display:hover {
+            border-color: #00d4aa;
+        }
+
+        .date-display.active {
+            border-color: #00d4aa;
+        }
+
+        .date-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .date-text {
+            flex: 1;
+            color: #a0a0b0;
+        }
+
+        .date-text.selected {
+            color: #ffffff;
+        }
+
+        .clear-date {
+            display: none;
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0 5px;
+            flex-shrink: 0;
+        }
+
+        .clear-date.visible {
+            display: block;
+        }
+
+        /* Скрытое поле даты – не показываем, используем программно */
+        #next_payment_date {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            font-weight: 600;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: #00d4aa;
+            color: #0f0f1a;
+        }
+
+        .btn-primary:hover {
+            background: #00b894;
+        }
+
+        .btn-secondary {
+            background: #3a3a5a;
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background: #4a4a6a;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+
+        .btn-edit {
+            background: #2c3e6b;
+            color: #ffffff;
+            margin-right: 5px;
+        }
+
+        .btn-edit:hover {
+            background: #3e5a9a;
+        }
+
+        .btn-delete {
+            background: #6b2c2c;
+            color: #ffffff;
+        }
+
+        .btn-delete:hover {
+            background: #9a3e3e;
+        }
+
+        .errors {
+            margin-top: 10px;
+            color: #ff6b6b;
+            font-size: 0.9rem;
+        }
+
+        .subscriptions-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .subscriptions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .subscription-card {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .subscription-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .subscription-card.near-warning {
+            border: 2px solid #ff9f43;
+            background: #1f1a2e;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .card-header h3 {
+            font-size: 1.3rem;
+            color: #ffffff;
+            word-break: break-word;
+        }
+
+        .frequency-badge {
+            background: #2c3e6b;
+            color: #a0c4ff;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .card-body {
+            flex: 1;
+        }
+
+        .cost {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #00d4aa;
+            margin-bottom: 10px;
+        }
+
+        .next-date {
+            color: #ccccdd;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .warning-text {
+            color: #ff9f43;
+        }
+
+        .warning-badge {
+            background: #ff9f43;
+            color: #0f0f1a;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .card-actions {
+            margin-top: 15px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            background: #1a1a2e;
+            border-radius: 12px;
+            color: #a0a0b0;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .stat-card {
+                min-width: 140px;
+                padding: 10px;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SubEnd</h1>
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <span class="stat-label">Расходы в месяц</span>
+                    <span class="stat-value">0,00 ₽</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Расходы в год</span>
+                    <span class="stat-value">0,00 ₽</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="form-section">
+                <h2 id="form-title">Добавить подписку</h2>
+                <form id="subscription-form">
+                    <input type="hidden" id="sub-id">
+                    <div class="form-group">
+                        <label for="name">Название</label>
+                        <input type="text" id="name" placeholder="Netflix, Spotify..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cost">Стоимость (₽)</label>
+                        <input type="number" id="cost" step="0.01" min="0.01" placeholder="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата следующего списания</label>
+                        <div class="date-picker-wrapper" id="date-picker-wrapper">
+                            <div class="date-display" id="date-display">
+                                <span class="date-icon"></span>
+                                <span class="date-text" id="date-text">Выберите дату</span>
+                                <button type="button" class="clear-date" id="clear-date">✕</button>
+                            </div>
+                            <input type="date" id="next_payment_date" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="frequency">Периодичность</label>
+                        <select id="frequency" required>
+                            <option value="monthly">Ежемесячно</option>
+                            <option value="yearly">Ежегодно</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" id="submit-btn" class="btn btn-primary">Добавить</button>
+                        <button type="button" id="cancel-btn" class="btn btn-secondary" style="display: none;">Отмена</button>
+                    </div>
+                    <div id="form-errors" class="errors"></div>
+                </form>
+            </section>
+
+            <section class="subscriptions-section">
+                <h2>Ваши подписки</h2>
+                <div class="subscriptions-grid" id="subscriptions-container"></div>
+                <div id="no-subs" class="empty-state">
+                    <p>У вас пока нет подписок. Добавьте первую!</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Хранилище: загружаем из localStorage или пустой массив
+        let subscriptions = JSON.parse(localStorage.getItem('subscriptions')) || [];
+        let editingId = null;
+
+        // Элементы DOM
+        const form = document.getElementById('subscription-form');
+        const subIdInput = document.getElementById('sub-id');
+        const nameInput = document.getElementById('name');
+        const costInput = document.getElementById('cost');
+        const dateInput = document.getElementById('next_payment_date');
+        const frequencyInput = document.getElementById('frequency');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const formTitle = document.getElementById('form-title');
+        const errorsDiv = document.getElementById('form-errors');
+        const statsDiv = document.getElementById('stats');
+        const container = document.getElementById('subscriptions-container');
+        const noSubsDiv = document.getElementById('no-subs');
+
+        // Элементы кастомного выбора даты
+        const datePickerWrapper = document.getElementById('date-picker-wrapper');
+        const dateDisplay = document.getElementById('date-display');
+        const dateText = document.getElementById('date-text');
+        const clearDateBtn = document.getElementById('clear-date');
+
+        // Форматирование суммы в рублях
+        function formatRub(amount) {
+            return amount.toFixed(0).replace('.', ',') + ' ₽';
+        }
+
+        // Сохранение в localStorage
+        function saveToStorage() {
+            localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
+        }
+
+        // Генерация уникального ID
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        }
+
+        // Расчёт статистики
+        function updateStats() {
+            let monthlyTotal = 0;
+            let yearlyTotal = 0;
+
+            subscriptions.forEach(sub => {
+                const cost = parseFloat(sub.cost);
+                if (sub.frequency === 'monthly') {
+                    monthlyTotal += cost;
+                    yearlyTotal += cost * 12;
+                } else {
+                    yearlyTotal += cost;
+                }
+            });
+
+            statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <span class="stat-label">Расходы в месяц</span>
+                    <span class="stat-value">${formatRub(monthlyTotal)}</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Расходы в год</span>
+                    <span class="stat-value">${formatRub(yearlyTotal)}</span>
+                </div>
+            `;
+        }
+
+        // Проверка, близка ли дата списания (3 дня)
+        function isNearDate(dateStr) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dueDate = new Date(dateStr + 'T00:00:00');
+            const diffTime = dueDate - today;
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+            return diffDays >= 0 && diffDays <= 3;
+        }
+
+        // Форматирование даты для отображения
+        function formatDate(dateStr) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateStr + 'T00:00:00').toLocaleDateString('ru-RU', options);
+        }
+
+        // Обновление отображения даты в кастомном поле
+        function updateDateDisplay() {
+            const val = dateInput.value;
+            if (val) {
+                dateText.textContent = formatDate(val);
+                dateText.classList.add('selected');
+                clearDateBtn.classList.add('visible');
+                dateDisplay.classList.add('active');
+            } else {
+                dateText.textContent = 'Выберите дату';
+                dateText.classList.remove('selected');
+                clearDateBtn.classList.remove('visible');
+                dateDisplay.classList.remove('active');
+            }
+        }
+
+        // Открытие нативного календаря
+        function openDatePicker() {
+            if (typeof dateInput.showPicker === 'function') {
+                // Современные браузеры (Chrome, Edge, Opera)
+                dateInput.showPicker();
+            } else {
+                // Для Firefox, Safari – временно делаем поле видимым и эмулируем клик
+                dateInput.style.position = 'static';
+                dateInput.style.opacity = '1';
+                dateInput.style.width = '100%';
+                dateInput.style.height = 'auto';
+                dateInput.style.pointerEvents = 'auto';
+                dateInput.style.zIndex = 'auto';
+                dateInput.focus();
+                dateInput.click();
+                // Возвращаем скрытое состояние после небольшой задержки
+                setTimeout(() => {
+                    dateInput.style.position = 'absolute';
+                    dateInput.style.opacity = '0';
+                    dateInput.style.width = '0';
+                    dateInput.style.height = '0';
+                    dateInput.style.pointerEvents = 'none';
+                    dateInput.style.zIndex = '-1';
+                }, 100);
+            }
+        }
+
+        // Обработчик клика по обёртке (открывает календарь)
+        datePickerWrapper.addEventListener('click', (e) => {
+            // Не открываем, если кликнули на кнопку очистки
+            if (e.target === clearDateBtn) return;
+            openDatePicker();
+        });
+
+        // Очистка даты
+        clearDateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dateInput.value = '';
+            updateDateDisplay();
+        });
+
+        // Слушатель изменения скрытого input[type=date]
+        dateInput.addEventListener('change', updateDateDisplay);
+
+        // Экранирование HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Отрисовка списка подписок
+        function renderSubscriptions() {
+            container.innerHTML = '';
+
+            if (subscriptions.length === 0) {
+                noSubsDiv.style.display = 'block';
+                updateStats();
+                return;
+            }
+
+            noSubsDiv.style.display = 'none';
+
+            subscriptions.forEach(sub => {
+                const near = isNearDate(sub.next_payment_date);
+                const card = document.createElement('div');
+                card.className = `subscription-card ${near ? 'near-warning' : ''}`;
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h3>${escapeHtml(sub.name)}</h3>
+                        <span class="frequency-badge">${sub.frequency === 'monthly' ? 'Ежемесячно' : 'Ежегодно'}</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="cost">${formatRub(parseFloat(sub.cost))}</p>
+                        <p class="next-date ${near ? 'warning-text' : ''}">
+                             Следующее списание: ${formatDate(sub.next_payment_date)}
+                            ${near ? '<span class="warning-badge">Скоро!</span>' : ''}
+                        </p>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-sm btn-edit" data-id="${sub.id}">Редактировать</button>
+                        <button class="btn btn-sm btn-delete" data-id="${sub.id}">Удалить</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', () => editSubscription(btn.dataset.id));
+            });
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', () => deleteSubscription(btn.dataset.id));
+            });
+
+            updateStats();
+        }
+
+        // Сброс формы
+        function resetForm() {
+            form.reset();
+            subIdInput.value = '';
+            editingId = null;
+            formTitle.textContent = 'Добавить подписку';
+            submitBtn.textContent = 'Добавить';
+            cancelBtn.style.display = 'none';
+            errorsDiv.innerHTML = '';
+            dateInput.value = '';
+            updateDateDisplay();
+        }
+
+        // Редактирование подписки
+        function editSubscription(id) {
+            const sub = subscriptions.find(s => s.id === id);
+            if (!sub) return;
+
+            subIdInput.value = sub.id;
+            nameInput.value = sub.name;
+            costInput.value = sub.cost;
+            dateInput.value = sub.next_payment_date;
+            frequencyInput.value = sub.frequency;
+
+            editingId = id;
+            formTitle.textContent = 'Редактировать подписку';
+            submitBtn.textContent = 'Сохранить';
+            cancelBtn.style.display = 'inline-block';
+            errorsDiv.innerHTML = '';
+            updateDateDisplay();
+            window.scrollTo({ top: form.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        // Удаление подписки
+        function deleteSubscription(id) {
+            if (!confirm('Вы уверены, что хотите удалить эту подписку?')) return;
+            subscriptions = subscriptions.filter(s => s.id !== id);
+            saveToStorage();
+            renderSubscriptions();
+            if (editingId === id) resetForm();
+        }
+
+        // Валидация формы
+        function validateForm(name, cost, dateStr, frequency) {
+            const errors = [];
+            if (!name.trim()) errors.push('Название обязательно');
+            if (cost === '' || isNaN(cost) || parseFloat(cost) <= 0) errors.push('Стоимость должна быть положительным числом');
+            if (!dateStr) errors.push('Дата обязательна');
+            else {
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (!dateRegex.test(dateStr)) errors.push('Некорректный формат даты (YYYY-MM-DD)');
+            }
+            if (frequency !== 'monthly' && frequency !== 'yearly') errors.push('Периодичность должна быть monthly или yearly');
+            return errors;
+        }
+
+        // Отправка формы
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            errorsDiv.innerHTML = '';
+
+            const name = nameInput.value.trim();
+            const cost = costInput.value.trim();
+            const dateStr = dateInput.value;
+            const frequency = frequencyInput.value;
+
+            const errors = validateForm(name, cost, dateStr, frequency);
+            if (errors.length > 0) {
+                errorsDiv.innerHTML = errors.map(err => `<p>${err}</p>`).join('');
+                return;
+            }
+
+            if (editingId) {
+                const sub = subscriptions.find(s => s.id === editingId);
+                if (sub) {
+                    sub.name = name;
+                    sub.cost = parseFloat(cost).toFixed(2);
+                    sub.next_payment_date = dateStr;
+                    sub.frequency = frequency;
+                }
+            } else {
+                const newSub = {
+                    id: generateId(),
+                    name: name,
+                    cost: parseFloat(cost).toFixed(2),
+                    next_payment_date: dateStr,
+                    frequency: frequency
+                };
+                subscriptions.push(newSub);
+            }
+
+            saveToStorage();
+            renderSubscriptions();
+            resetForm();
+        });
+
+        // Отмена редактирования
+        cancelBtn.addEventListener('click', resetForm);
+
+        // Первоначальная отрисовка
+        renderSubscriptions();
+        updateDateDisplay();
+    </script>
+</body>
+</html>
