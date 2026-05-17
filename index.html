@@ -107,7 +107,7 @@
             border-color: #00d4aa;
         }
 
-        /* Стили для кастомной кнопки выбора даты */
+        /* Кастомный выбор даты */
         .date-picker-wrapper {
             position: relative;
             width: 100%;
@@ -124,8 +124,8 @@
             border-radius: 8px;
             color: #ffffff;
             font-size: 1rem;
-            cursor: pointer;
             transition: border 0.3s;
+            cursor: pointer;
             user-select: none;
         }
 
@@ -160,20 +160,23 @@
             cursor: pointer;
             padding: 0 5px;
             flex-shrink: 0;
+            z-index: 2;
         }
 
         .clear-date.visible {
             display: block;
         }
 
-        /* Скрытое поле даты – не показываем, используем программно */
+        /* Скрытое поле – не мешает, но доступно для программного клика */
         #next_payment_date {
             position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             opacity: 0;
-            width: 0;
-            height: 0;
-            pointer-events: none;
-            z-index: -1;
+            cursor: pointer;
+            z-index: 1;
         }
 
         .form-actions {
@@ -438,11 +441,9 @@
     </div>
 
     <script>
-        // Хранилище: загружаем из localStorage или пустой массив
         let subscriptions = JSON.parse(localStorage.getItem('subscriptions')) || [];
         let editingId = null;
 
-        // Элементы DOM
         const form = document.getElementById('subscription-form');
         const subIdInput = document.getElementById('sub-id');
         const nameInput = document.getElementById('name');
@@ -457,32 +458,26 @@
         const container = document.getElementById('subscriptions-container');
         const noSubsDiv = document.getElementById('no-subs');
 
-        // Элементы кастомного выбора даты
         const datePickerWrapper = document.getElementById('date-picker-wrapper');
         const dateDisplay = document.getElementById('date-display');
         const dateText = document.getElementById('date-text');
         const clearDateBtn = document.getElementById('clear-date');
 
-        // Форматирование суммы в рублях
         function formatRub(amount) {
             return amount.toFixed(0).replace('.', ',') + ' ₽';
         }
 
-        // Сохранение в localStorage
         function saveToStorage() {
             localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
         }
 
-        // Генерация уникального ID
         function generateId() {
             return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
         }
 
-        // Расчёт статистики
         function updateStats() {
             let monthlyTotal = 0;
             let yearlyTotal = 0;
-
             subscriptions.forEach(sub => {
                 const cost = parseFloat(sub.cost);
                 if (sub.frequency === 'monthly') {
@@ -492,7 +487,6 @@
                     yearlyTotal += cost;
                 }
             });
-
             statsDiv.innerHTML = `
                 <div class="stat-card">
                     <span class="stat-label">Расходы в месяц</span>
@@ -505,7 +499,6 @@
             `;
         }
 
-        // Проверка, близка ли дата списания (3 дня)
         function isNearDate(dateStr) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -515,13 +508,11 @@
             return diffDays >= 0 && diffDays <= 3;
         }
 
-        // Форматирование даты для отображения
         function formatDate(dateStr) {
             const options = { year: 'numeric', month: 'long', day: 'numeric' };
             return new Date(dateStr + 'T00:00:00').toLocaleDateString('ru-RU', options);
         }
 
-        // Обновление отображения даты в кастомном поле
         function updateDateDisplay() {
             const val = dateInput.value;
             if (val) {
@@ -537,36 +528,35 @@
             }
         }
 
-        // Открытие нативного календаря
+        // Функция, гарантированно открывающая календарь
         function openDatePicker() {
+            // Современные браузеры (Chrome, Edge, Opera, Яндекс) — метод showPicker
             if (typeof dateInput.showPicker === 'function') {
-                // Современные браузеры (Chrome, Edge, Opera)
                 dateInput.showPicker();
             } else {
-                // Для Firefox, Safari – временно делаем поле видимым и эмулируем клик
+                // Резервный вариант для Firefox, Safari и т.д.
+                // Делаем поле видимым, фокусируем и кликаем
                 dateInput.style.position = 'static';
                 dateInput.style.opacity = '1';
                 dateInput.style.width = '100%';
                 dateInput.style.height = 'auto';
                 dateInput.style.pointerEvents = 'auto';
-                dateInput.style.zIndex = 'auto';
                 dateInput.focus();
                 dateInput.click();
-                // Возвращаем скрытое состояние после небольшой задержки
+                // Возвращаем скрытое состояние через небольшую задержку
                 setTimeout(() => {
                     dateInput.style.position = 'absolute';
                     dateInput.style.opacity = '0';
-                    dateInput.style.width = '0';
-                    dateInput.style.height = '0';
-                    dateInput.style.pointerEvents = 'none';
-                    dateInput.style.zIndex = '-1';
+                    dateInput.style.width = '100%';
+                    dateInput.style.height = '100%';
+                    dateInput.style.pointerEvents = 'auto';
                 }, 100);
             }
         }
 
-        // Обработчик клика по обёртке (открывает календарь)
+        // Клик по обёртке открывает календарь
         datePickerWrapper.addEventListener('click', (e) => {
-            // Не открываем, если кликнули на кнопку очистки
+            // Если клик по крестику очистки – не открываем
             if (e.target === clearDateBtn) return;
             openDatePicker();
         });
@@ -578,28 +568,22 @@
             updateDateDisplay();
         });
 
-        // Слушатель изменения скрытого input[type=date]
         dateInput.addEventListener('change', updateDateDisplay);
 
-        // Экранирование HTML
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Отрисовка списка подписок
         function renderSubscriptions() {
             container.innerHTML = '';
-
             if (subscriptions.length === 0) {
                 noSubsDiv.style.display = 'block';
                 updateStats();
                 return;
             }
-
             noSubsDiv.style.display = 'none';
-
             subscriptions.forEach(sub => {
                 const near = isNearDate(sub.next_payment_date);
                 const card = document.createElement('div');
@@ -634,7 +618,6 @@
             updateStats();
         }
 
-        // Сброс формы
         function resetForm() {
             form.reset();
             subIdInput.value = '';
@@ -647,17 +630,14 @@
             updateDateDisplay();
         }
 
-        // Редактирование подписки
         function editSubscription(id) {
             const sub = subscriptions.find(s => s.id === id);
             if (!sub) return;
-
             subIdInput.value = sub.id;
             nameInput.value = sub.name;
             costInput.value = sub.cost;
             dateInput.value = sub.next_payment_date;
             frequencyInput.value = sub.frequency;
-
             editingId = id;
             formTitle.textContent = 'Редактировать подписку';
             submitBtn.textContent = 'Сохранить';
@@ -667,7 +647,6 @@
             window.scrollTo({ top: form.offsetTop - 20, behavior: 'smooth' });
         }
 
-        // Удаление подписки
         function deleteSubscription(id) {
             if (!confirm('Вы уверены, что хотите удалить эту подписку?')) return;
             subscriptions = subscriptions.filter(s => s.id !== id);
@@ -676,7 +655,6 @@
             if (editingId === id) resetForm();
         }
 
-        // Валидация формы
         function validateForm(name, cost, dateStr, frequency) {
             const errors = [];
             if (!name.trim()) errors.push('Название обязательно');
@@ -690,22 +668,18 @@
             return errors;
         }
 
-        // Отправка формы
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             errorsDiv.innerHTML = '';
-
             const name = nameInput.value.trim();
             const cost = costInput.value.trim();
             const dateStr = dateInput.value;
             const frequency = frequencyInput.value;
-
             const errors = validateForm(name, cost, dateStr, frequency);
             if (errors.length > 0) {
                 errorsDiv.innerHTML = errors.map(err => `<p>${err}</p>`).join('');
                 return;
             }
-
             if (editingId) {
                 const sub = subscriptions.find(s => s.id === editingId);
                 if (sub) {
@@ -715,25 +689,21 @@
                     sub.frequency = frequency;
                 }
             } else {
-                const newSub = {
+                subscriptions.push({
                     id: generateId(),
                     name: name,
                     cost: parseFloat(cost).toFixed(2),
                     next_payment_date: dateStr,
                     frequency: frequency
-                };
-                subscriptions.push(newSub);
+                });
             }
-
             saveToStorage();
             renderSubscriptions();
             resetForm();
         });
 
-        // Отмена редактирования
         cancelBtn.addEventListener('click', resetForm);
 
-        // Первоначальная отрисовка
         renderSubscriptions();
         updateDateDisplay();
     </script>
