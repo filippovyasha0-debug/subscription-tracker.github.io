@@ -24,7 +24,7 @@
 ## Демо
 
 Проект опубликован на GitHub Pages:  
-👉 [**Открыть SubEnd**](https://flippovaysha0-debug.github.io/SubEnd/)
+👉 [**Открыть SubEnd**](https://filippovyasha0-debug.github.io/SubEnd/)
 
 ## Как запустить локально
 
