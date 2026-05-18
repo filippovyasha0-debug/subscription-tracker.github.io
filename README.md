@@ -25,9 +25,3 @@
 
 Проект опубликован на GitHub Pages:  
 👉 [**Открыть SubEnd**](https://filippovyasha0-debug.github.io/SubEnd/)
-
-## Как запустить локально
-
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/flippovaysha0-debug/SubEnd.git
