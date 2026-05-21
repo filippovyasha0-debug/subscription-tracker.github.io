@@ -456,7 +456,11 @@
             currentUser = user;
             if (user) {
                 authBtn.textContent = 'Выйти (' + user.email + ')';
-                authBtn.onclick = () => signOut(auth);
+                authBtn.onclick = () => {
+    if (confirm('Вы уверены, что хотите выйти?')) {
+        signOut(auth);
+    }
+};
                 loadUserData(user.uid);
                 requestNotificationPermission(user.uid);
             } else {
