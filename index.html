@@ -8,8 +8,6 @@
     <link rel="apple-touch-icon" href="apple-icon.png">
     <meta name="theme-color" content="#00d4aa">
     <link rel="manifest" href="manifest.json">
-    <!-- Chart.js для графика -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #0f0f1a;
@@ -149,14 +147,9 @@
         .subscription-card.near-warning { border:2px solid var(--warning); }
         .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; }
         .card-header h3 { font-size:1.3rem; color:var(--text); word-break:break-word; }
-        .category-badge {
-            background: var(--btn-secondary-bg); color: var(--text-secondary);
-            padding:3px 8px; border-radius:20px; font-size:0.75rem; font-weight:600; white-space:nowrap;
-        }
         .frequency-badge {
             background: var(--btn-secondary-bg); color: var(--text-secondary);
             padding:3px 8px; border-radius:20px; font-size:0.75rem; font-weight:600; white-space:nowrap;
-            margin-left:5px;
         }
         .card-body { flex:1; }
         .cost { font-size:1.8rem; font-weight:bold; color:var(--accent); margin-bottom:10px; }
@@ -170,7 +163,6 @@
         .history-section {
             background: var(--surface); padding:25px; border-radius:16px;
             box-shadow: 0 4px 20px var(--shadow); border:1px solid var(--border);
-            margin-bottom:30px;
         }
         .history-section h2 { margin-bottom:15px; color:var(--text); font-size:1.5rem; }
         .history-list { width:100%; border-collapse:collapse; }
@@ -210,9 +202,6 @@
         .google-btn:hover { background: #f1f1f1; }
         .link-btn { background:none; border:none; color:var(--accent); cursor:pointer; text-decoration:underline; margin-top:10px; display:block; width:100%; text-align:center; }
 
-        .chart-container { margin-top:30px; max-width:500px; margin-left:auto; margin-right:auto; }
-        canvas { width:100%; }
-
         @media (max-width:600px) {
             header h1 { font-size:2rem; }
             .stat-card { min-width:140px; padding:10px; }
@@ -244,15 +233,6 @@
                     <div class="form-group">
                         <label for="name">Название</label>
                         <input type="text" id="name" placeholder="Netflix, Spotify..." required>
-                    </div>
-                    <div class="form-group">
-                        <label for="category">Категория</label>
-                        <select id="category">
-                            <option value="Развлечения">Развлечения</option>
-                            <option value="Работа">Работа</option>
-                            <option value="Здоровье">Здоровье</option>
-                            <option value="Другое">Другое</option>
-                        </select>
                     </div>
                     <div class="form-group">
                         <label for="cost">Стоимость (₽)</label>
@@ -294,10 +274,6 @@
                 <div id="history-container"></div>
                 <button class="btn-clear-history" id="clear-history" style="display:none;">Очистить историю</button>
             </section>
-
-            <div class="chart-container">
-                <canvas id="categoryChart"></canvas>
-            </div>
         </main>
     </div>
 
@@ -324,7 +300,6 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
         import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js';
 
-        // Конфигурация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyDc8sGzAdQ8rTZTGmA8QCZtpHGW_eKLmA4",
             authDomain: "sunend-c91ed.firebaseapp.com",
@@ -340,7 +315,6 @@
         const db = getFirestore(app);
         const messaging = getMessaging(app);
 
-        // Замените на ваш публичный VAPID-ключ
         const vapidPublicKey = 'BGQcpcKjHKS3YK5kLkZ2i31W_LIssNlk70NUbTdMJX9ow9DZmNHIZw3mDHp3UUPiwWZvmO-JN5YWOVtXHJkbSjA';
 
         // ---------- Глобальные переменные ----------
@@ -348,7 +322,6 @@
         let subscriptions = [];
         let paymentHistory = [];
         let editingId = null;
-        let chartInstance = null;
 
         // DOM элементы
         const authBtn = document.getElementById('auth-btn');
@@ -358,7 +331,6 @@
         const form = document.getElementById('subscription-form');
         const subIdInput = document.getElementById('sub-id');
         const nameInput = document.getElementById('name');
-        const categorySelect = document.getElementById('category');
         const costInput = document.getElementById('cost');
         const dateInput = document.getElementById('next_payment_date');
         const frequencyInput = document.getElementById('frequency');
@@ -386,7 +358,6 @@
         const forgotPasswordBtn = document.getElementById('forgot-password-btn');
         const closeAuthModalBtn = document.getElementById('close-auth-modal');
         const authTitle = document.getElementById('auth-title');
-        const categoryChartCanvas = document.getElementById('categoryChart').getContext('2d');
 
         let isRegistering = false;
 
@@ -495,7 +466,6 @@
                 paymentHistory = [];
                 saveLocal();
                 renderAll();
-                if (chartInstance) chartInstance.destroy();
             }
         });
 
@@ -670,7 +640,6 @@
             saveLocal();
             if (currentUser) saveToFirestore(currentUser.uid);
             renderHistory();
-            updateChart();
         }
 
         function renderHistory() {
@@ -737,10 +706,7 @@
                 card.innerHTML = `
                     <div class="card-header">
                         <h3>${escapeHtml(sub.name)}</h3>
-                        <div>
-                            <span class="category-badge">${sub.category || 'Другое'}</span>
-                            <span class="frequency-badge">${sub.frequency === 'monthly' ? 'Ежемесячно' : 'Ежегодно'}</span>
-                        </div>
+                        <span class="frequency-badge">${sub.frequency === 'monthly' ? 'Ежемесячно' : 'Ежегодно'}</span>
                     </div>
                     <div class="card-body">
                         <p class="cost">${formatRub(parseFloat(sub.cost))}</p>
@@ -777,7 +743,6 @@
             if (!sub) return;
             subIdInput.value = sub.id;
             nameInput.value = sub.name;
-            categorySelect.value = sub.category || 'Другое';
             costInput.value = sub.cost;
             dateInput.value = sub.next_payment_date;
             frequencyInput.value = sub.frequency;
@@ -813,7 +778,6 @@
             const cost = costInput.value.trim();
             const dateStr = dateInput.value;
             const frequency = frequencyInput.value;
-            const category = categorySelect.value;
             const errors = validateForm(name, cost, dateStr, frequency);
             if (errors.length) {
                 errorsDiv.innerHTML = errors.map(e => `<p>${e}</p>`).join('');
@@ -823,11 +787,11 @@
                 const sub = subscriptions.find(s => s.id === editingId);
                 if (sub) {
                     sub.name = name; sub.cost = parseFloat(cost).toFixed(2);
-                    sub.category = category; sub.next_payment_date = dateStr; sub.frequency = frequency;
+                    sub.next_payment_date = dateStr; sub.frequency = frequency;
                 }
             } else {
                 subscriptions.push({
-                    id: generateId(), name, cost: parseFloat(cost).toFixed(2), category,
+                    id: generateId(), name, cost: parseFloat(cost).toFixed(2),
                     next_payment_date: dateStr, frequency
                 });
             }
@@ -839,46 +803,9 @@
 
         cancelBtn.addEventListener('click', resetForm);
 
-        // ---------- График ----------
-        function updateChart() {
-            if (!subscriptions.length) {
-                if (chartInstance) chartInstance.destroy();
-                return;
-            }
-            const categories = {};
-            subscriptions.forEach(sub => {
-                const cat = sub.category || 'Другое';
-                const cost = parseFloat(sub.cost);
-                categories[cat] = (categories[cat] || 0) + cost;
-            });
-            const labels = Object.keys(categories);
-            const data = Object.values(categories);
-
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(categoryChartCanvas, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: ['#00d4aa','#ff9f43','#ff6b6b','#a0c4ff','#b19cd9','#f0b27a'],
-                        borderColor: 'var(--surface)',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: 'var(--text-secondary)' } }
-                    }
-                }
-            });
-        }
-
         function renderAll() {
             renderSubscriptions();
             renderHistory();
-            updateChart();
         }
 
         // Первоначальная отрисовка
