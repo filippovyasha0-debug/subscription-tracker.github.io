@@ -8,6 +8,8 @@
     <link rel="apple-touch-icon" href="apple-icon.png">
     <meta name="theme-color" content="#00d4aa">
     <link rel="manifest" href="manifest.json">
+    <!-- Chart.js для графика -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #0f0f1a;
@@ -71,9 +73,7 @@
         .theme-toggle:hover, .auth-btn:hover { background: var(--btn-secondary-hover); }
 
         /* Stats */
-        .stats {
-            display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin-bottom:30px;
-        }
+        .stats { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; margin-bottom:30px; }
         .stat-card {
             background: var(--stat-bg); padding:15px 25px; border-radius:12px;
             text-align:center; min-width:200px; box-shadow: 0 4px 15px var(--shadow);
@@ -82,7 +82,7 @@
         .stat-label { display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:5px; }
         .stat-value { font-size:2rem; font-weight:bold; color:var(--accent); }
 
-        /* Forms */
+        /* Формы */
         .form-section {
             background: var(--surface); padding:25px; border-radius:16px;
             margin-bottom:30px; box-shadow: 0 4px 20px var(--shadow); border:1px solid var(--border);
@@ -134,7 +134,7 @@
         .btn-delete:hover { background:#9a3e3e; }
         .errors { margin-top:10px; color:var(--danger); font-size:0.9rem; }
 
-        /* Subscriptions */
+        /* Подписки */
         .subscriptions-section h2 { font-size:1.5rem; margin-bottom:20px; color:var(--text); }
         .subscriptions-grid {
             display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -166,10 +166,11 @@
         .days-left.soon { color:var(--warning); }
         .card-actions { margin-top:15px; display:flex; flex-wrap:wrap; gap:5px; }
 
-        /* History */
+        /* История */
         .history-section {
             background: var(--surface); padding:25px; border-radius:16px;
             box-shadow: 0 4px 20px var(--shadow); border:1px solid var(--border);
+            margin-bottom:30px;
         }
         .history-section h2 { margin-bottom:15px; color:var(--text); font-size:1.5rem; }
         .history-list { width:100%; border-collapse:collapse; }
@@ -183,6 +184,34 @@
             border:none; padding:8px 16px; border-radius:6px; cursor:pointer; margin-top:15px;
         }
         .empty-state { text-align:center; padding:40px; background:var(--surface); border-radius:12px; color:var(--text-secondary); font-size:1.1rem; }
+
+        /* Модалка */
+        .modal {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:1000;
+        }
+        .modal.active { display:flex; }
+        .modal-content {
+            background: var(--surface); padding:30px; border-radius:16px;
+            max-width:400px; width:90%; box-shadow: 0 4px 20px var(--shadow);
+            border:1px solid var(--border); color:var(--text);
+        }
+        .modal-content h2 { margin-bottom:20px; }
+        .modal-content input {
+            width:100%; padding:10px; margin-bottom:10px; border:1px solid var(--border);
+            border-radius:6px; background: var(--input-bg); color:var(--text);
+        }
+        .modal-content .btn { margin-top:10px; width:100%; }
+        .google-btn {
+            background: #fff; color: #000; border:1px solid #ccc;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            font-weight:500; font-size:0.95rem;
+        }
+        .google-btn:hover { background: #f1f1f1; }
+        .link-btn { background:none; border:none; color:var(--accent); cursor:pointer; text-decoration:underline; margin-top:10px; display:block; width:100%; text-align:center; }
+
+        .chart-container { margin-top:30px; max-width:500px; margin-left:auto; margin-right:auto; }
+        canvas { width:100%; }
 
         @media (max-width:600px) {
             header h1 { font-size:2rem; }
@@ -265,36 +294,63 @@
                 <div id="history-container"></div>
                 <button class="btn-clear-history" id="clear-history" style="display:none;">Очистить историю</button>
             </section>
+
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
         </main>
+    </div>
+
+    <!-- Модальное окно авторизации -->
+    <div class="modal" id="auth-modal">
+        <div class="modal-content">
+            <h2 id="auth-title">Вход</h2>
+            <input type="email" id="auth-email" placeholder="Email" required>
+            <input type="password" id="auth-password" placeholder="Пароль" required>
+            <button class="btn btn-primary" id="auth-submit-btn">Войти</button>
+            <button class="btn google-btn" id="google-login-btn">
+                <span style="font-size:1.2rem;">G</span> Войти через Google
+            </button>
+            <button class="link-btn" id="switch-auth-mode">Нет аккаунта? Зарегистрироваться</button>
+            <button class="link-btn" id="forgot-password-btn">Забыли пароль?</button>
+            <button class="btn btn-secondary" id="close-auth-modal" style="margin-top:10px;">Отмена</button>
+        </div>
     </div>
 
     <!-- Firebase SDKs -->
     <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-    import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js';
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDc8sGzAdQ8rTZTGmA8QCZtpHGW_eKLmA4",
-        authDomain: "sunend-c91ed.firebaseapp.com",
-        projectId: "sunend-c91ed",
-        storageBucket: "sunend-c91ed.firebasestorage.app",
-        messagingSenderId: "615953820337",
-        appId: "1:615953820337:web:61d4bdd6846bec1f7b1090",
-        measurementId: "G-04D53QR7ZN"
-    };
+        // Конфигурация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDc8sGzAdQ8rTZTGmA8QCZtpHGW_eKLmA4",
+            authDomain: "sunend-c91ed.firebaseapp.com",
+            projectId: "sunend-c91ed",
+            storageBucket: "sunend-c91ed.firebasestorage.app",
+            messagingSenderId: "615953820337",
+            appId: "1:615953820337:web:61d4bdd6846bec1f7b1090",
+            measurementId: "G-04D53QR7ZN"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const messaging = getMessaging(app);
+
+        // Замените на ваш публичный VAPID-ключ
+        const vapidPublicKey = 'BGQcpcKjHKS3YK5kLkZ2i31W_LIssNlk70NUbTdMJX9ow9DZmNHIZw3mDHp3UUPiwWZvmO-JN5YWOVtXHJkbSjA';
 
         // ---------- Глобальные переменные ----------
         let currentUser = null;
         let subscriptions = [];
         let paymentHistory = [];
         let editingId = null;
+        let chartInstance = null;
 
-        // DOM
+        // DOM элементы
         const authBtn = document.getElementById('auth-btn');
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
@@ -320,54 +376,128 @@
         const dateText = document.getElementById('date-text');
         const clearDateBtn = document.getElementById('clear-date');
 
+        // Элементы модального окна
+        const authModal = document.getElementById('auth-modal');
+        const authEmail = document.getElementById('auth-email');
+        const authPassword = document.getElementById('auth-password');
+        const authSubmitBtn = document.getElementById('auth-submit-btn');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const switchAuthModeBtn = document.getElementById('switch-auth-mode');
+        const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+        const closeAuthModalBtn = document.getElementById('close-auth-modal');
+        const authTitle = document.getElementById('auth-title');
+        const categoryChartCanvas = document.getElementById('categoryChart').getContext('2d');
+
+        let isRegistering = false;
+
         // ---------- Аутентификация ----------
-        function showAuthModal() {
-    const email = prompt('Введите email:');
-    if (!email) return;
-    const password = prompt('Введите пароль (минимум 6 символов):');
-    if (!password) return;
-    const isNew = confirm('Зарегистрироваться? (OK – да, Отмена – войти)');
-
-    const handleError = (err) => {
-        if (err.code === 'auth/email-already-in-use') {
-            alert('Этот email уже зарегистрирован. Нажмите «Войти» и введите пароль.');
-        } else if (err.code === 'auth/wrong-password') {
-            alert('Неверный пароль. Попробуйте снова.');
-        } else if (err.code === 'auth/user-not-found') {
-            alert('Пользователь с таким email не найден. Зарегистрируйтесь.');
-        } else {
-            alert('Ошибка: ' + err.message);
+        function openAuthModal() {
+            authModal.classList.add('active');
+            authEmail.value = '';
+            authPassword.value = '';
+            isRegistering = false;
+            authTitle.textContent = 'Вход';
+            authSubmitBtn.textContent = 'Войти';
+            switchAuthModeBtn.textContent = 'Нет аккаунта? Зарегистрироваться';
         }
-    };
 
-    if (isNew) {
-        createUserWithEmailAndPassword(auth, email, password)
-            .catch(handleError);
-    } else {
-        signInWithEmailAndPassword(auth, email, password)
-            .catch(handleError);
-    }
-}
+        function closeAuthModal() {
+            authModal.classList.remove('active');
+        }
 
-        function updateAuthUI(user) {
+        closeAuthModalBtn.addEventListener('click', closeAuthModal);
+        window.addEventListener('click', (e) => {
+            if (e.target === authModal) closeAuthModal();
+        });
+
+        switchAuthModeBtn.addEventListener('click', () => {
+            isRegistering = !isRegistering;
+            if (isRegistering) {
+                authTitle.textContent = 'Регистрация';
+                authSubmitBtn.textContent = 'Зарегистрироваться';
+                switchAuthModeBtn.textContent = 'Уже есть аккаунт? Войти';
+            } else {
+                authTitle.textContent = 'Вход';
+                authSubmitBtn.textContent = 'Войти';
+                switchAuthModeBtn.textContent = 'Нет аккаунта? Зарегистрироваться';
+            }
+        });
+
+        forgotPasswordBtn.addEventListener('click', async () => {
+            const email = authEmail.value.trim();
+            if (!email) {
+                alert('Введите email для восстановления');
+                return;
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                alert('Письмо для сброса пароля отправлено на ' + email);
+                closeAuthModal();
+            } catch (err) {
+                alert('Ошибка: ' + err.message);
+            }
+        });
+
+        authSubmitBtn.addEventListener('click', async () => {
+            const email = authEmail.value.trim();
+            const password = authPassword.value;
+            if (!email || !password) {
+                alert('Заполните email и пароль');
+                return;
+            }
+            try {
+                if (isRegistering) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+                closeAuthModal();
+            } catch (err) {
+                if (err.code === 'auth/email-already-in-use') {
+                    alert('Этот email уже зарегистрирован. Войдите или восстановите пароль.');
+                } else if (err.code === 'auth/wrong-password') {
+                    alert('Неверный пароль');
+                } else if (err.code === 'auth/user-not-found') {
+                    alert('Пользователь не найден. Зарегистрируйтесь.');
+                } else {
+                    alert('Ошибка: ' + err.message);
+                }
+            }
+        });
+
+        googleLoginBtn.addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+                closeAuthModal();
+            } catch (err) {
+                if (err.code !== 'auth/popup-closed-by-user') {
+                    alert('Ошибка: ' + err.message);
+                }
+            }
+        });
+
+        // Кнопка «Войти» в шапке открывает модалку
+        authBtn.addEventListener('click', openAuthModal);
+
+        // Отслеживание состояния аутентификации
+        onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
                 authBtn.textContent = 'Выйти (' + user.email + ')';
                 authBtn.onclick = () => signOut(auth);
-                // Загружаем данные пользователя
                 loadUserData(user.uid);
+                requestNotificationPermission(user.uid);
             } else {
                 authBtn.textContent = 'Войти';
-                authBtn.onclick = showAuthModal;
-                // Очищаем локальные данные
+                authBtn.onclick = openAuthModal;
                 subscriptions = [];
                 paymentHistory = [];
                 saveLocal();
                 renderAll();
+                if (chartInstance) chartInstance.destroy();
             }
-        }
-
-        onAuthStateChanged(auth, updateAuthUI);
+        });
 
         // ---------- Работа с Firestore ----------
         async function loadUserData(uid) {
@@ -378,7 +508,6 @@
                 subscriptions = data.subscriptions || [];
                 paymentHistory = data.paymentHistory || [];
             } else {
-                // Перенос из localStorage, если есть
                 const localSubs = JSON.parse(localStorage.getItem('subscriptions') || '[]');
                 const localHist = JSON.parse(localStorage.getItem('paymentHistory') || '[]');
                 subscriptions = localSubs;
@@ -391,7 +520,6 @@
             }
             saveLocal();
             renderAll();
-            // Подписка на изменения в реальном времени
             onSnapshot(userDocRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
@@ -416,6 +544,28 @@
             localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
             localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
         }
+
+        // ---------- Push-уведомления ----------
+        async function requestNotificationPermission(uid) {
+            if (!('Notification' in window)) return;
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                try {
+                    const currentToken = await getToken(messaging, { vapidKey: vapidPublicKey });
+                    if (currentToken) {
+                        const userDocRef = doc(db, 'users', uid);
+                        await setDoc(userDocRef, { fcmToken: currentToken }, { merge: true });
+                    }
+                } catch (err) {
+                    console.log('Не удалось получить FCM токен', err);
+                }
+            }
+        }
+
+        onMessage(messaging, (payload) => {
+            const { title, body } = payload.notification;
+            new Notification(title, { body, icon: '/icon.png' });
+        });
 
         // ---------- Утилиты ----------
         function formatRub(amount) {
@@ -520,6 +670,7 @@
             saveLocal();
             if (currentUser) saveToFirestore(currentUser.uid);
             renderHistory();
+            updateChart();
         }
 
         function renderHistory() {
@@ -561,7 +712,7 @@
             sub.next_payment_date = recalcNextDate(sub.next_payment_date, sub.frequency);
             saveLocal();
             if (currentUser) saveToFirestore(currentUser.uid);
-            renderSubscriptions();
+            renderAll();
         }
 
         // ---------- Подписки ----------
@@ -642,7 +793,7 @@
             subscriptions = subscriptions.filter(s => s.id !== id);
             saveLocal();
             if (currentUser) saveToFirestore(currentUser.uid);
-            renderSubscriptions();
+            renderAll();
             if (editingId === id) resetForm();
         }
 
@@ -682,18 +833,55 @@
             }
             saveLocal();
             if (currentUser) await saveToFirestore(currentUser.uid);
-            renderSubscriptions();
+            renderAll();
             resetForm();
         });
 
         cancelBtn.addEventListener('click', resetForm);
 
+        // ---------- График ----------
+        function updateChart() {
+            if (!subscriptions.length) {
+                if (chartInstance) chartInstance.destroy();
+                return;
+            }
+            const categories = {};
+            subscriptions.forEach(sub => {
+                const cat = sub.category || 'Другое';
+                const cost = parseFloat(sub.cost);
+                categories[cat] = (categories[cat] || 0) + cost;
+            });
+            const labels = Object.keys(categories);
+            const data = Object.values(categories);
+
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(categoryChartCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#00d4aa','#ff9f43','#ff6b6b','#a0c4ff','#b19cd9','#f0b27a'],
+                        borderColor: 'var(--surface)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: 'var(--text-secondary)' } }
+                    }
+                }
+            });
+        }
+
         function renderAll() {
             renderSubscriptions();
             renderHistory();
+            updateChart();
         }
 
-        // Первоначальная отрисовка (если пользователь не залогинен, то данные из localStorage уже загружены)
+        // Первоначальная отрисовка
         renderAll();
         updateDateDisplay();
     </script>
