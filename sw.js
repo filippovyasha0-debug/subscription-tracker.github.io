@@ -1,4 +1,4 @@
-const CACHE_NAME = 'subend-v3';
+const CACHE_NAME = 'subend-v4';
 const ASSETS = [
   './',
   './index.html',
