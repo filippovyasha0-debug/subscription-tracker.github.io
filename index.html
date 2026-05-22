@@ -464,8 +464,8 @@
                 loadUserData(user.uid);
                 requestNotificationPermission(user.uid);
             } else {
-                const shortEmail = user.email.length > 5 
-  ? user.email.substring(0, 20) + '…' 
+                const shortEmail = user.email.length > 15 
+  ? user.email.substring(0, 10) + '…' 
   : user.email;
 authBtn.textContent = 'Выйти (' + shortEmail + ')';
                 authBtn.onclick = openAuthModal;
